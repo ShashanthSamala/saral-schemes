@@ -1,6 +1,5 @@
-streamlit==1.28.0
-beautifulsoup4==4.12.2
-requests==2.31.0
-google-generativeai==0.7.2
-python-dotenv==1.0.0
-sqlalchemy==2.0.23
+streamlit
+beautifulsoup4
+requests
+python-dotenv
+sqlalchemy
