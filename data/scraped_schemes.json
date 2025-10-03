@@ -1,0 +1,98 @@
+[
+  {
+    "title": "Rythu Bandhu Scheme",
+    "description": "Financial assistance to farmers for agricultural investment per acre per season. Direct benefit transfer to farmer accounts.",
+    "category": "Telangana State",
+    "url": "https://www.telangana.gov.in",
+    "eligibility": "All farmers in Telangana who own agricultural land",
+    "benefits": "Rs. 5,000 per acre per season (two seasons per year)"
+  },
+  {
+    "title": "Aasara Pension Scheme",
+    "description": "Monthly pension for elderly citizens, widows, toddy tappers, disabled persons, and beedi workers to ensure social security.",
+    "category": "Telangana State",
+    "url": "https://www.telangana.gov.in",
+    "eligibility": "Age 65+ for elderly, widows of any age, disabled persons with 40%+ disability",
+    "benefits": "Rs. 2,016 per month pension amount directly to bank account"
+  },
+  {
+    "title": "Kalyana Lakshmi Scheme",
+    "description": "Financial assistance for marriage of girls from economically weaker sections to reduce financial burden on poor families.",
+    "category": "Telangana State",
+    "url": "https://www.telangana.gov.in",
+    "eligibility": "SC/ST/BC/Minority families with annual income less than Rs. 2 lakhs",
+    "benefits": "Rs. 1,00,116 one-time payment for marriage expenses"
+  },
+  {
+    "title": "KCR Kit Scheme",
+    "description": "Essential items kit for pregnant women and newborn babies delivered in government hospitals to improve maternal and child health.",
+    "category": "Telangana State",
+    "url": "https://www.telangana.gov.in",
+    "eligibility": "All pregnant women delivering in government hospitals in Telangana",
+    "benefits": "Kit containing baby clothes, mosquito net, napkins, soap, powder worth Rs. 5,000"
+  },
+  {
+    "title": "Mission Bhagiratha",
+    "description": "Providing safe drinking water to every household through tap connections in rural and urban areas.",
+    "category": "Telangana State",
+    "url": "https://www.telangana.gov.in",
+    "eligibility": "All households in Telangana state",
+    "benefits": "Free piped drinking water connection to household"
+  },
+  {
+    "title": "TS-bPASS Scholarship",
+    "description": "Post-matric scholarship for SC/ST/BC/Minority students pursuing higher education to promote education in backward communities.",
+    "category": "Telangana State",
+    "url": "https://telanganaepass.cgg.gov.in",
+    "eligibility": "SC/ST/BC/Minority students studying in colleges and universities",
+    "benefits": "Tuition fee reimbursement + hostel charges + maintenance allowance"
+  },
+  {
+    "title": "PM-KISAN Scheme",
+    "description": "Pradhan Mantri Kisan Samman Nidhi - Income support to all farmer families to supplement financial needs for agriculture.",
+    "category": "Central Government",
+    "url": "https://pmkisan.gov.in",
+    "eligibility": "All landholding farmer families across India",
+    "benefits": "Rs. 6,000 per year in three equal installments of Rs. 2,000"
+  },
+  {
+    "title": "Ayushman Bharat - PMJAY",
+    "description": "Pradhan Mantri Jan Arogya Yojana - World's largest health insurance scheme providing free treatment to poor families.",
+    "category": "Central Government",
+    "url": "https://pmjay.gov.in",
+    "eligibility": "Bottom 40% poor and vulnerable families as per SECC database",
+    "benefits": "Health cover of Rs. 5 lakh per family per year for secondary and tertiary care hospitalization"
+  },
+  {
+    "title": "PM Awas Yojana - Gramin",
+    "description": "Housing for all in rural areas - Financial assistance to construct pucca houses with basic amenities.",
+    "category": "Central Government",
+    "url": "https://pmayg.nic.in",
+    "eligibility": "Homeless families and families living in kutcha houses in rural areas",
+    "benefits": "Rs. 1.20 lakh in plain areas, Rs. 1.30 lakh in hilly areas for house construction"
+  },
+  {
+    "title": "Ujjwala Yojana",
+    "description": "Pradhan Mantri Ujjwala Yojana - Free LPG connections to women from BPL families for clean cooking fuel.",
+    "category": "Central Government",
+    "url": "https://pmuy.gov.in",
+    "eligibility": "Women from BPL families, PMAY, AAY beneficiaries",
+    "benefits": "Free LPG connection with deposit-free cylinder and stove"
+  },
+  {
+    "title": "National Pension Scheme",
+    "description": "NPS - Pension scheme for all citizens to provide retirement income and old age security.",
+    "category": "Central Government",
+    "url": "https://www.npscra.nsdl.co.in",
+    "eligibility": "All Indian citizens aged 18-70 years",
+    "benefits": "Tax benefits + pension after 60 years + flexible investment options"
+  },
+  {
+    "title": "Pradhan Mantri Mudra Yojana",
+    "description": "MUDRA loans for small businesses and entrepreneurs to promote self-employment and entrepreneurship.",
+    "category": "Central Government",
+    "url": "https://www.mudra.org.in",
+    "eligibility": "Small businesses, micro-enterprises, street vendors, artisans",
+    "benefits": "Loans up to Rs. 10 lakh without collateral at low interest rates"
+  }
+]
