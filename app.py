@@ -84,7 +84,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Tabs
-tab1, tab2, tab3 = st.tabs(["🏠 Browse Schemes", "�� Search", "ℹ️ About"])
+tab1, tab2, tab3 = st.tabs(["🏠 Browse Schemes", "🔍  Search", "ℹ️ About"])
 
 # TAB 1: Browse
 with tab1:
