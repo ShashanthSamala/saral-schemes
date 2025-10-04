@@ -272,7 +272,7 @@ Patient design
     
     with col3:
         st.info("""
-**�� For Everyone**
+**🌐 For Everyone**
 
 100% Free  
 No registration  
