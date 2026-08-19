@@ -2,6 +2,7 @@ import streamlit as st
 import os
 from scraper.scrape_schemes import SchemesScraper
 from database.db_manager import DatabaseManager
+from llm.translator import SchemeTranslator
 
 # Page config
 st.set_page_config(
@@ -35,6 +36,9 @@ st.markdown("""
 if 'db' not in st.session_state:
     st.session_state.db = DatabaseManager()
 
+if 'translator' not in st.session_state:
+    st.session_state.translator = SchemeTranslator(st.session_state.db)
+
 if 'language' not in st.session_state:
     st.session_state.language = 'English'
 
@@ -53,6 +57,18 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     st.markdown("---")
+
+    # Language selection
+    selected_lang = st.selectbox(
+        "🌐 Choose Language",
+        ["English", "Hindi", "Telugu", "Tamil", "Kannada"],
+        index=["English", "Hindi", "Telugu", "Tamil", "Kannada"].index(st.session_state.language)
+    )
+    if selected_lang != st.session_state.language:
+        st.session_state.language = selected_lang
+        st.rerun()
+
+    st.markdown("---")
     
     if st.button("🔄 Load Schemes Data", use_container_width=True):
         with st.spinner("Loading schemes..."):
@@ -69,6 +85,7 @@ with st.sidebar:
     st.markdown("### 📊 Statistics")
     stats = st.session_state.db.get_stats()
     st.metric("Total Schemes", stats.get('total_schemes', 0))
+    st.metric("Cached Translations", stats.get('total_translations', 0))
     
     st.markdown("---")
     st.caption("Smart India Hackathon 2025")
@@ -79,7 +96,7 @@ st.markdown("""
     <div class="main-header">
         <h1>🏛️ SARAL</h1>
         <p style="font-size: 1.2rem; margin: 0.5rem 0;">Scheme Access in Regional And Local Languages</p>
-        <p style="font-size: 0.95rem;">सरल | సరళ | எளிய | सुलभ</p>
+        <p style="font-size: 0.95rem;">सरल | సరళ | எளிய | सुलभ | ಸರಳ</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -119,28 +136,30 @@ with tab1:
         else:
             schemes = all_schemes
         
-        st.success(f"📊 Showing **{len(schemes)}** schemes")
+        st.success(f"📊 Showing **{len(schemes)}** schemes (Language: **{st.session_state.language}**)")
         
         for scheme in schemes:
-            with st.expander(f"📄 {scheme['title']}", expanded=False):
+            display_scheme = st.session_state.translator.translate_scheme(scheme, st.session_state.language)
+
+            with st.expander(f"📄 {display_scheme['title']}", expanded=False):
                 col1, col2 = st.columns([3, 1])
                 
                 with col1:
                     st.write("**📝 Description:**")
-                    st.write(scheme['description'])
+                    st.write(display_scheme['description'])
                     
                     st.write("**✅ Eligibility:**")
-                    st.write(scheme['eligibility'])
+                    st.write(display_scheme['eligibility'])
                     
                     st.write("**💰 Benefits:**")
-                    st.write(scheme['benefits'])
+                    st.write(display_scheme['benefits'])
                 
                 with col2:
                     st.write(f"**🏷️ Category:**")
-                    st.write(scheme['category'])
+                    st.write(display_scheme['category'])
                     
-                    if scheme.get('url') and scheme['url'] != '#':
-                        st.markdown(f"**🔗 [Visit Website]({scheme['url']})**")
+                    if display_scheme.get('url') and display_scheme['url'] != '#':
+                        st.markdown(f"**🔗 [Visit Website]({display_scheme['url']})**")
 
 # TAB 2: Search
 with tab2:
@@ -161,12 +180,13 @@ with tab2:
         
         if results:
             for scheme in results:
+                display_scheme = st.session_state.translator.translate_scheme(scheme, st.session_state.language)
                 st.markdown(f"""
                     <div class="scheme-card">
-                        <h3>📄 {scheme['title']}</h3>
-                        <p><strong>🏷️ Category:</strong> {scheme['category']}</p>
-                        <p><strong>📝 Description:</strong> {scheme['description']}</p>
-                        <p><strong>💰 Benefits:</strong> {scheme['benefits']}</p>
+                        <h3>📄 {display_scheme['title']}</h3>
+                        <p><strong>🏷️ Category:</strong> {display_scheme['category']}</p>
+                        <p><strong>📝 Description:</strong> {display_scheme['description']}</p>
+                        <p><strong>💰 Benefits:</strong> {display_scheme['benefits']}</p>
                     </div>
                 """, unsafe_allow_html=True)
                 st.markdown("---")
@@ -192,6 +212,9 @@ with tab3:
         st.write("- Telangana State schemes")
         st.write("- Central Government schemes")
         st.write("")
+        st.write("✅ **Multi-Language Support**")
+        st.write("- English, Hindi, Telugu, Tamil, Kannada")
+        st.write("")
         st.write("✅ **Smart Search**")
         st.write("- Keyword-based search")
         st.write("- Filter by category")
@@ -209,6 +232,7 @@ Frontend:  Streamlit
 Backend:   Python 3.12
 Database:  SQLite
 Scraping:  BeautifulSoup4
+AI Engine: Google Gemini API
 Cloud:     Streamlit Cloud
         """)
     
@@ -220,13 +244,13 @@ Cloud:     Streamlit Cloud
         col_a, col_b = st.columns(2)
         with col_a:
             st.metric("📄 Total Schemes", stats.get('total_schemes', 0))
+            st.metric("🌐 Cached Translations", stats.get('total_translations', 0))
         with col_b:
             st.metric("💬 Categories", len(stats.get('by_category', {})))
         
         st.markdown("---")
         
         st.markdown("### 🚀 Coming Soon")
-        st.write("🌐 Multi-language translation")
         st.write("🔄 Text simplification")
         st.write("💬 AI-powered chatbot")
         st.write("🎤 Voice input/output")
