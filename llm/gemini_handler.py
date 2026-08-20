@@ -12,9 +12,9 @@ class GeminiHandler:
             raise ValueError("GOOGLE_API_KEY not found in .env file")
         
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
         self.last_request_time = 0
-        self.min_request_interval = 1  # Seconds between requests
+        self.min_request_interval = 4  # Seconds between requests to respect free tier RPM
     
     def _rate_limit(self):
         """Simple rate limiting"""
