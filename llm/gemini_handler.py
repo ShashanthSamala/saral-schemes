@@ -5,14 +5,24 @@ import time
 
 load_dotenv()
 
+import json
+
 class GeminiHandler:
     def __init__(self):
         api_key = os.getenv('GOOGLE_API_KEY')
         if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found in .env file")
+            try:
+                import streamlit as st
+                if hasattr(st, "secrets") and "GOOGLE_API_KEY" in st.secrets:
+                    api_key = st.secrets["GOOGLE_API_KEY"]
+            except Exception:
+                pass
+
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY not found in environment variables or Streamlit secrets")
         
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.last_request_time = 0
         self.min_request_interval = 4  # Seconds between requests to respect free tier RPM
     
@@ -69,24 +79,59 @@ Simplified version:"""
             return text
     
     def translate_scheme(self, scheme, language):
-        """Translate entire scheme - with progress feedback"""
+        """Translate entire scheme in a single API call using JSON formatting"""
         if language == 'English':
             return scheme
         
-        print(f"   Translating to {language}...", end='', flush=True)
+        self._rate_limit()
         
-        translated = {}
-        
+        prompt = f"""Translate the following government scheme information into {language}.
+Return ONLY a valid JSON object matching this structure, with no markdown formatting or extra text:
+{{
+  "title": "translated title",
+  "description": "translated description",
+  "eligibility": "translated eligibility",
+  "benefits": "translated benefits"
+}}
+
+Scheme Information:
+Title: {scheme.get('title', '')}
+Description: {scheme.get('description', '')}
+Eligibility: {scheme.get('eligibility', '')}
+Benefits: {scheme.get('benefits', '')}
+"""
         try:
-            translated['title'] = self.translate_text(scheme['title'], language)
-            translated['description'] = self.translate_text(scheme['description'], language)
-            translated['eligibility'] = self.translate_text(scheme['eligibility'], language)
-            translated['benefits'] = self.translate_text(scheme['benefits'], language)
-            print(" ✅")
-            return translated
+            response = self.model.generate_content(prompt)
+            text_resp = response.text.strip()
+            # Clean possible markdown json code block
+            if text_resp.startswith("```json"):
+                text_resp = text_resp[7:]
+            if text_resp.startswith("```"):
+                text_resp = text_resp[3:]
+            if text_resp.endswith("```"):
+                text_resp = text_resp[:-3]
+            text_resp = text_resp.strip()
+
+            data = json.loads(text_resp)
+            return {
+                "title": data.get("title", scheme.get("title", "")),
+                "description": data.get("description", scheme.get("description", "")),
+                "eligibility": data.get("eligibility", scheme.get("eligibility", "")),
+                "benefits": data.get("benefits", scheme.get("benefits", ""))
+            }
         except Exception as e:
-            print(f" ❌ ({e})")
-            return scheme
+            print(f"Scheme batch translation error: {e}")
+            # Fallback to field by field if JSON parsing fails
+            try:
+                return {
+                    'title': self.translate_text(scheme.get('title', ''), language),
+                    'description': self.translate_text(scheme.get('description', ''), language),
+                    'eligibility': self.translate_text(scheme.get('eligibility', ''), language),
+                    'benefits': self.translate_text(scheme.get('benefits', ''), language)
+                }
+            except Exception as e2:
+                print(f"Fallback translation error: {e2}")
+                return scheme
     
     def generate_simple_explanation(self, scheme):
         """Generate very simple explanation for illiterate users"""

@@ -7,12 +7,10 @@ class SchemeTranslator:
         self.db = db_manager or DatabaseManager()
         self.gemini = None
 
-        # Check if GOOGLE_API_KEY is available before initializing GeminiHandler
-        if os.getenv("GOOGLE_API_KEY"):
-            try:
-                self.gemini = GeminiHandler()
-            except Exception as e:
-                print(f"Warning: Failed to initialize GeminiHandler: {e}")
+        try:
+            self.gemini = GeminiHandler()
+        except Exception as e:
+            print(f"Warning: Failed to initialize GeminiHandler: {e}")
 
     def translate_scheme(self, scheme: dict, target_language: str) -> dict:
         """
