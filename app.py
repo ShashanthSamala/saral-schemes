@@ -68,6 +68,17 @@ with st.sidebar:
         st.session_state.language = selected_lang
         st.rerun()
 
+    # Warning if Gemini API key is missing
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        try:
+            if hasattr(st, "secrets") and "GOOGLE_API_KEY" in st.secrets:
+                api_key = st.secrets["GOOGLE_API_KEY"]
+        except Exception:
+            pass
+    if not api_key and st.session_state.language != "English":
+        st.warning("⚠️ GOOGLE_API_KEY is not set. Live translation requires GOOGLE_API_KEY environment variable or Streamlit Secrets.")
+
     st.markdown("---")
     
     if st.button("🔄 Load Schemes Data", use_container_width=True):
