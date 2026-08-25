@@ -35,6 +35,13 @@ class SchemeTranslator:
                     "benefits": cached.get("translated_benefits") or scheme.get("benefits", "")
                 }
 
+        # If self.gemini is None, try initializing it now in case API key was set dynamically
+        if not self.gemini:
+            try:
+                self.gemini = GeminiHandler()
+            except Exception:
+                pass
+
         # If Gemini AI handler is available, perform translation
         if self.gemini:
             try:

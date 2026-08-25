@@ -1,5 +1,9 @@
 import streamlit as st
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from scraper.scrape_schemes import SchemesScraper
 from database.db_manager import DatabaseManager
 from llm.translator import SchemeTranslator
@@ -68,16 +72,25 @@ with st.sidebar:
         st.session_state.language = selected_lang
         st.rerun()
 
-    # Warning if Gemini API key is missing
+    # Check and allow user input for GOOGLE_API_KEY
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         try:
             if hasattr(st, "secrets") and "GOOGLE_API_KEY" in st.secrets:
                 api_key = st.secrets["GOOGLE_API_KEY"]
+                os.environ["GOOGLE_API_KEY"] = api_key
         except Exception:
             pass
+
+    if not api_key:
+        user_key = st.text_input("🔑 Enter Gemini API Key", type="password", help="Enter your Google Gemini API key for live translations")
+        if user_key:
+            os.environ["GOOGLE_API_KEY"] = user_key
+            api_key = user_key
+            st.success("API Key saved for session!")
+
     if not api_key and st.session_state.language != "English":
-        st.warning("⚠️ GOOGLE_API_KEY is not set. Live translation requires GOOGLE_API_KEY environment variable or Streamlit Secrets.")
+        st.warning("⚠️ Live translation requires a Gemini API key. Enter your key above or add GOOGLE_API_KEY to Streamlit Secrets.")
 
     st.markdown("---")
     
