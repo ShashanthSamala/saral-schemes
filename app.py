@@ -1,327 +1,178 @@
 import streamlit as st
 import os
-from scraper.scrape_schemes import SchemesScraper
-from database.db_manager import DatabaseManager
-from llm.translator import SchemeTranslator
 
-# Page config
+from database.db_manager import init_db, get_all_schemes, search_schemes, filter_by_category, get_stats
+from scraper.scrape_schemes import run_sync_pipeline
+from llm.rag_chatbot import ask_rag_chatbot, sync_knowledge_base_to_store
+
+# Page Configuration
 st.set_page_config(
-    page_title="SARAL - Scheme Access Portal",
-    page_icon="🏛️",
-    layout="wide"
+    page_title="SARAL - Government Scheme Access",
+    page_icon="🌾",
+    layout="wide",
 )
 
-# CSS
+# Custom CSS for Rural / Farmer Accessibility (Larger touch targets, high contrast)
 st.markdown("""
     <style>
-    .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
-        border-radius: 15px;
-        color: white;
-        text-align: center;
-        margin-bottom: 2rem;
+    .stButton button {
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        padding: 10px 24px !important;
+        border-radius: 8px !important;
+    }
+    h1, h2, h3 {
+        color: #1B5E20 !important;
     }
     .scheme-card {
-        background: #f5f7fa;
-        padding: 1.5rem;
+        background-color: #F9FBE7;
+        padding: 20px;
         border-radius: 12px;
-        border-left: 5px solid #667eea;
-        margin: 1rem 0;
+        border: 1px solid #C8E6C9;
+        margin-bottom: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Initialize
-if 'db' not in st.session_state:
-    st.session_state.db = DatabaseManager()
+# Initialize Database on Startup
+init_db()
 
-if 'translator' not in st.session_state:
-    st.session_state.translator = SchemeTranslator(st.session_state.db)
+# Header Section
+st.title("SARAL: Scheme Access in Regional And Local Languages")
+st.markdown("### Simple, accessible access to State and Central government welfare schemes.")
 
-if 'language' not in st.session_state:
-    st.session_state.language = 'English'
+# Top-Level Language Selector (Pills)
+lang_mapping = {
+    "English": "en",
+    "हिन्दी": "hi",
+    "తెలుగు": "te",
+    "தமிழ்": "ta",
+    "ಕನ್ನಡ": "kn"
+}
+selected_lang_label = st.pills(
+    "Select Language / भाषा / భాష / மொழಿ / ಭಾಷೆ",
+    list(lang_mapping.keys()),
+    default="English"
+)
+current_lang_code = lang_mapping[selected_lang_label]
 
-# Sidebar
-with st.sidebar:
-    st.markdown("""
-        <div style="text-align: center; padding: 1rem; 
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    border-radius: 8px; color: white; margin-bottom: 1rem;">
-            <h2 style="margin: 0; color: white;">सरल</h2>
-            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #f0f0f0;">SARAL</p>
-            <p style="margin: 0.25rem 0 0 0; font-size: 0.7rem; color: #e0e0e0;">
-                Scheme Access in Regional<br>And Local Languages
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+# Main Navigation Tabs
+tab_browse, tab_chat, tab_admin = st.tabs(["Browse Schemes", "Ask Assistant", "Admin Controls"])
+
+# -------------------------------------------------------------------------
+# TAB 1: BROWSE SCHEMES
+# -------------------------------------------------------------------------
+with tab_browse:
+    st.header("Available Welfare Schemes")
     
-    st.markdown("---")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        search_query = st.text_input("🔍 Search by keyword (e.g. farmer, pension, health, housing):")
+    with col2:
+        level_filter = st.selectbox("Filter Level", ["All", "Central", "State"])
 
-    # Language selection
-    selected_lang = st.selectbox(
-        "🌐 Choose Language",
-        ["English", "Hindi", "Telugu", "Tamil", "Kannada"],
-        index=["English", "Hindi", "Telugu", "Tamil", "Kannada"].index(st.session_state.language)
-    )
-    if selected_lang != st.session_state.language:
-        st.session_state.language = selected_lang
-        st.rerun()
-
-    # Warning if Gemini API key is missing
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        try:
-            if hasattr(st, "secrets") and "GOOGLE_API_KEY" in st.secrets:
-                api_key = st.secrets["GOOGLE_API_KEY"]
-        except Exception:
-            pass
-    if not api_key and st.session_state.language != "English":
-        st.warning("⚠️ GOOGLE_API_KEY is not set. Live translation requires GOOGLE_API_KEY environment variable or Streamlit Secrets.")
-
-    st.markdown("---")
-    
-    if st.button("🔄 Load Schemes Data", use_container_width=True):
-        with st.spinner("Loading schemes..."):
-            try:
-                scraper = SchemesScraper()
-                schemes = scraper.scrape_all()
-                st.session_state.db.insert_schemes(schemes)
-                st.success(f"✅ Loaded {len(schemes)} schemes!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-    
-    st.markdown("---")
-    st.markdown("### 📊 Statistics")
-    stats = st.session_state.db.get_stats()
-    st.metric("Total Schemes", stats.get('total_schemes', 0))
-    st.metric("Cached Translations", stats.get('total_translations', 0))
-    
-    st.markdown("---")
-    st.caption("Smart India Hackathon 2025")
-    st.caption("Problem Statement: 25126")
-
-# Header
-st.markdown("""
-    <div class="main-header">
-        <h1>🏛️ SARAL</h1>
-        <p style="font-size: 1.2rem; margin: 0.5rem 0;">Scheme Access in Regional And Local Languages</p>
-        <p style="font-size: 0.95rem;">सरल | సరళ | எளிய | सुलभ | ಸರಳ</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# Tabs
-tab1, tab2, tab3 = st.tabs(["🏠 Browse Schemes", "🔍  Search", "ℹ️ About"])
-
-# TAB 1: Browse
-with tab1:
-    st.markdown("""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
-            <h2 style="color: white; margin: 0; text-align: center;">
-                📋 Available Government Schemes
-            </h2>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    category = st.selectbox(
-        "Filter by Category",
-        ["All", "Telangana State", "Central Government"]
-    )
-    
-    all_schemes = st.session_state.db.get_all_schemes()
-    
-    if not all_schemes:
-        st.warning("⚠️ No schemes loaded. Click 'Load Schemes Data' button in sidebar.")
-        
-        st.info("""
-        **Quick Start:**
-        1. Click the **"🔄 Load Schemes Data"** button in the sidebar
-        2. Wait a few seconds for data to load
-        3. Browse through available schemes
-        """)
+    # Fetch schemes based on search or category
+    if search_query:
+        schemes = search_schemes(search_query, language=current_lang_code)
     else:
-        if category != "All":
-            schemes = [s for s in all_schemes if s['category'] == category]
-        else:
-            schemes = all_schemes
-        
-        st.success(f"📊 Showing **{len(schemes)}** schemes (Language: **{st.session_state.language}**)")
+        schemes = get_all_schemes(language=current_lang_code)
+
+    if level_filter != "All":
+        schemes = [s for s in schemes if s.get("level", "").lower() == level_filter.lower()]
+
+    if not schemes:
+        st.info("No schemes found matching your search. Try adjusting keywords or refresh data in Admin tab.")
+    else:
+        st.write(f"Showing **{len(schemes)}** schemes (Language: **{selected_lang_label}**)")
         
         for scheme in schemes:
-            display_scheme = st.session_state.translator.translate_scheme(scheme, st.session_state.language)
-
-            with st.expander(f"📄 {display_scheme['title']}", expanded=False):
-                col1, col2 = st.columns([3, 1])
+            with st.container(border=True):
+                st.markdown(f"### {scheme.get('title', 'Untitled Scheme')}")
                 
-                with col1:
-                    st.write("**📝 Description:**")
-                    st.write(display_scheme['description'])
-                    
-                    st.write("**✅ Eligibility:**")
-                    st.write(display_scheme['eligibility'])
-                    
-                    st.write("**💰 Benefits:**")
-                    st.write(display_scheme['benefits'])
+                badge_color = "orange" if scheme.get('level') == "Central" else "green"
+                st.markdown(f"**Level:** :{badge_color}[{scheme.get('level', 'General')}] | **Category:** {scheme.get('category', 'General')}")
                 
-                with col2:
-                    st.write(f"**🏷️ Category:**")
-                    st.write(display_scheme['category'])
+                st.markdown(f"**Overview:** {scheme.get('description', '')}")
+                
+                with st.expander("📖 View Full Guide (Eligibility, Documents, Application Steps)"):
+                    st.markdown(f"**✅ Eligibility Rules:**\n{scheme.get('eligibility', 'N/A')}")
+                    st.markdown(f"**💰 Benefits:**\n{scheme.get('benefits', 'N/A')}")
+                    st.markdown(f"**📄 Required Documents:**\n{scheme.get('required_documents', 'N/A')}")
+                    st.markdown(f"**📝 How to Apply:**\n{scheme.get('how_to_apply', 'N/A')}")
+                    st.markdown(f"**⏳ Deadlines:**\n{scheme.get('deadlines', 'N/A')}")
+                    st.markdown(f"**📌 What to Do After Applying:**\n{scheme.get('post_application_steps', 'N/A')}")
                     
-                    if display_scheme.get('url') and display_scheme['url'] != '#':
-                        st.markdown(f"**🔗 [Visit Website]({display_scheme['url']})**")
+                    if scheme.get('source_url'):
+                        st.markdown(f"[🔗 Official Portal Link]({scheme['source_url']})")
 
-# TAB 2: Search
-with tab2:
-    st.markdown("""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
-            <h2 style="color: white; margin: 0; text-align: center;">
-                🔍 Search Government Schemes
-            </h2>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    query = st.text_input("🔎 Enter keywords (e.g., farmer, pension, health, education)")
-    
-    if query:
-        results = st.session_state.db.search_schemes(query)
-        st.success(f"📊 Found **{len(results)}** schemes matching '{query}'")
-        
-        if results:
-            for scheme in results:
-                display_scheme = st.session_state.translator.translate_scheme(scheme, st.session_state.language)
-                st.markdown(f"""
-                    <div class="scheme-card">
-                        <h3>📄 {display_scheme['title']}</h3>
-                        <p><strong>🏷️ Category:</strong> {display_scheme['category']}</p>
-                        <p><strong>📝 Description:</strong> {display_scheme['description']}</p>
-                        <p><strong>💰 Benefits:</strong> {display_scheme['benefits']}</p>
-                    </div>
-                """, unsafe_allow_html=True)
-                st.markdown("---")
-        else:
-            st.info("No schemes found. Try different keywords.")
+# -------------------------------------------------------------------------
+# TAB 2: ASK ASSISTANT (RAG CHATBOT)
+# -------------------------------------------------------------------------
+with tab_chat:
+    st.header("SARAL Scheme Assistant")
+    st.markdown("Ask questions about eligibility, required documents, deadlines, or what to do after applying.")
 
-# TAB 3: About
-with tab3:
-    st.markdown("""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
-            <h2 style="color: white; margin: 0; text-align: center;">
-                ℹ️ About SARAL
-            </h2>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 🎯 Key Features")
-        st.write("✅ **Browse Government Schemes**")
-        st.write("- Telangana State schemes")
-        st.write("- Central Government schemes")
-        st.write("")
-        st.write("✅ **Multi-Language Support**")
-        st.write("- English, Hindi, Telugu, Tamil, Kannada")
-        st.write("")
-        st.write("✅ **Smart Search**")
-        st.write("- Keyword-based search")
-        st.write("- Filter by category")
-        st.write("")
-        st.write("✅ **User-Friendly Design**")
-        st.write("- Clean interface")
-        st.write("- Mobile responsive")
-        st.write("- Easy navigation")
-        
-        st.markdown("---")
-        
-        st.markdown("### 🛠️ Technology Stack")
-        st.code("""
-Frontend:  Streamlit
-Backend:   Python 3.12
-Database:  SQLite
-Scraping:  BeautifulSoup4
-AI Engine: Google Gemini API
-Cloud:     Streamlit Cloud
-        """)
-    
-    with col2:
-        st.markdown("### 📊 Live Statistics")
-        
-        stats = st.session_state.db.get_stats()
-        
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.metric("📄 Total Schemes", stats.get('total_schemes', 0))
-            st.metric("🌐 Cached Translations", stats.get('total_translations', 0))
-        with col_b:
-            st.metric("💬 Categories", len(stats.get('by_category', {})))
-        
-        st.markdown("---")
-        
-        st.markdown("### 🚀 Coming Soon")
-        st.write("🔄 Text simplification")
-        st.write("💬 AI-powered chatbot")
-        st.write("🎤 Voice input/output")
-        st.write("📱 WhatsApp integration")
-    
-    st.markdown("---")
-    
-    st.markdown("### 👥 Team Information")
-    
-    st.info("""
-**Smart India Hackathon 2025**
+    # Quick starter suggestion buttons
+    st.markdown("**Quick Questions:**")
+    q_cols = st.columns(3)
+    preset_query = None
+    if q_cols[0].button("What schemes are for farmers?"):
+        preset_query = "What schemes are available for farmers and what benefits do they get?"
+    if q_cols[1].button("What documents are needed?"):
+        preset_query = "What documents are required to apply for welfare schemes?"
+    if q_cols[2].button("What to do after applying?"):
+        preset_query = "What should I do after submitting my application and how do I track status?"
 
-**Problem Statement:** 25126 - Government Schemes Accessibility
+    # Initialize chat history in session state
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-SARAL (Scheme Access in Regional And Local Languages) is a solution that bridges the gap between government welfare schemes and the people who need them most - especially rural, elderly, and less educated citizens across India.
+    # Display prior messages
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-**Our Mission:** Making every government scheme accessible to every Indian, in their own language, in simple words they can understand.
-    """)
-    
-    st.markdown("---")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.info("""
-**🌾 For Rural Citizens**
+    # User chat input (or preset click)
+    prompt = st.chat_input("Type your question here...") or preset_query
 
-Simple interface  
-Clear information  
-Easy access  
-No tech barriers
-        """)
-    
-    with col2:
-        st.info("""
-**👴 For Elderly**
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-Large text  
-Easy navigation  
-Simple language  
-Patient design
-        """)
-    
-    with col3:
-        st.info("""
-**🌐 For Everyone**
+        with st.chat_message("assistant"):
+            with st.spinner("Checking SARAL scheme records..."):
+                try:
+                    result = ask_rag_chatbot(prompt, language_code=current_lang_code, chat_history=st.session_state.messages)
+                    answer = result["answer"]
+                    sources = result["sources"]
 
-100% Free  
-No registration  
-24/7 available  
-Mobile friendly
-        """)
+                    st.markdown(answer)
+                    if sources:
+                        st.caption(f"📚 Sources: {', '.join(set(sources))}")
 
-# Footer
-st.markdown("---")
-st.markdown("""
-    <div style="text-align: center; color: #718096; padding: 1rem;">
-        <p><strong>SARAL</strong> - Scheme Access in Regional And Local Languages</p>
-        <p>सरल | సరళ | எளிய | सुलभ | ಸರಳ</p>
-        <p style="font-size: 0.9rem;">Smart India Hackathon 2025 | Problem Statement: 25126</p>
-        <p style="font-size: 0.85rem;">Made with ❤️ for Rural India 🇮🇳</p>
-    </div>
-""", unsafe_allow_html=True)
+                    st.session_state.messages.append({"role": "assistant", "content": answer})
+                except Exception as e:
+                    error_msg = f"Sorry, I encountered an error answering your question. Please try again."
+                    st.error(error_msg)
+
+# -------------------------------------------------------------------------
+# TAB 3: ADMIN CONTROLS
+# -------------------------------------------------------------------------
+with tab_admin:
+    st.header("Administrator Control Panel")
+    st.markdown("Manage scheme data synchronization and cloud RAG index updates.")
+
+    stats = get_stats()
+    col_a, col_b = st.metric("Total Schemes in Database", stats.get("total_schemes", 0)), st.metric("Categories", len(stats.get("categories", [])))
+
+    if st.button("🔄 Refresh Data & Sync Knowledge Base", type="primary"):
+        with st.spinner("Scraping government portals, updating SQLite, translating, and syncing cloud RAG store..."):
+            try:
+                run_sync_pipeline()
+                md_path = os.path.join(os.path.dirname(__file__), "data/saral_knowledge_base.md")
+                sync_knowledge_base_to_store(md_path)
+                st.success("Data synchronization and RAG store indexing completed successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Sync failed: {e}")
